@@ -6,13 +6,14 @@ from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 import time
+import csv
 
 # Setup WebDriver
 def setup_driver():
     chrome_options = Options()
-    # chrome_options.add_argument("--headless")  # Uncomment if you want headless mode
-    path_to_chromedriver = "C:\\Users\\slim\\OneDrive\\Desktop\\win_64\\chromedriver-win64\\chromedriver.exe"
-    service = Service(path_to_chromedriver)
+    chrome_options.add_argument("--headless")  # Uncomment if you want headless mode
+    chromedriver_path = "C:\\Users\\slim\\OneDrive\\Desktop\\win_64\\chromedriver-win64\\chromedriver.exe"
+    service = Service(chromedriver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
@@ -38,12 +39,25 @@ def get_partner_names(driver):
             partner_names.append(link.text)
         except:
             continue
+    print("Total partners found:",{len(partner_names)} )
+    print("Overall Partner Details", partner_names)
     return partner_names
+
+
+def save_to_csv(all_data, filename="cve_partners_output.csv"):
+    headers = ["Partner", "Scope", "Program Role", "Organization Type", "Country*"]
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        for row in all_data:
+            writer.writerow(row)
+    print(f"\nSaved results to {filename}")
 
 
 def search_partner(driver, partner_name):
     wait = WebDriverWait(driver, 10)
 
+    data = [] 
     # Close popup if present
     try:
         close_icon = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".svg-inline--fa.fa-xmark")))
@@ -72,14 +86,25 @@ def search_partner(driver, partner_name):
     for row in rows:
         cells = row.find_elements(By.TAG_NAME, "td")
         cell_texts = [cell.text for cell in cells]
-        print("\t".join(cell_texts))
+        if cell_texts:
+            full_row = [partner_name] + cell_texts
+            print("\t".join(full_row))
+            data.append(full_row)
+    return data
+
 
 
 if __name__ == "__main__":
     driver = setup_driver()
     try:
         partners = get_partner_names(driver)
-        for partner in partners:
-            search_partner(driver, partner)
+        #Sample output
+        partner = 'Airbus'
+        all_results = search_partner(driver, partner)
+        #for partner in partners:
+        #    search_partner(driver, partner)
+        #    print("-" * 40)
+        #Save the result
+        save_to_csv(all_results)
     finally:
         driver.quit()
